@@ -1,0 +1,35 @@
+@use "../helpers" as *;
+
+.field {
+  display: grid;
+  position: relative;
+  row-gap: rem(5);
+
+  &:has(.field__errors:not(:empty)) {
+    .field__control {
+      border-color: var(--color-red);
+    }
+  }
+
+  &__control {
+    border-radius: rem(6);
+    padding: rem(10);
+    border: rem(1) solid var(--color-gray-light);
+    font-weight: 500;
+    color: var(--color-blue-marine);
+
+    &:hover,
+    &:focus-visible {
+      outline: rem(1);
+      border-color: var(--color-blue-purplish);
+    }
+  }
+
+  &__errors {
+    font-size: rem(14);
+    position: absolute;
+    top: 0;
+    right: 0;
+    color: var(--color-red);
+  }
+}
