@@ -4,7 +4,7 @@ String.prototype.toCapitalize = function () {
   return this.charAt(0).toUpperCase() + this.slice(1);
 };
 
-export default class FormsValidation {
+class FormsValidation {
   selectors = {
     stepLabel: "[data-js-form-step]",
   };
@@ -62,6 +62,57 @@ export default class FormsValidation {
     }
   };
 }
+
+class FormActionsButtons {
+  selectors = {
+    formActions: "[data-js-form-actions]",
+    nextStepButton: "[data-js-form-actions-next]",
+    prevStepButton: "[data-js-form-actions-prev]",
+  };
+
+  constructor(stepInstance) {
+    this.stepInstance = stepInstance;
+    this.formActionsElement = document.querySelector(
+      this.selectors.formActions
+    );
+    this.bindEvents();
+  }
+
+  bindEvents = () => {
+    this.formActionsElement.addEventListener("click", this.onFormActionsClick);
+  };
+
+  onFormActionsClick = (event) => {
+    if (this.stepInstance?.onFormActionsClick) {
+      this.stepInstance.onFormActionsClick();
+      return;
+    }
+    const target = event.target;
+
+    const nextButtons = document.querySelectorAll(
+      this.selectors.nextStepButton
+    );
+    const isNextButton = [...nextButtons].some((button) => button === target);
+
+    const prevButtons = document.querySelectorAll(
+      this.selectors.prevStepButton
+    );
+    const isPrevButton = [...prevButtons].some((button) => button === target);
+
+    if (isNextButton) {
+      if (this.stepInstance.saveData) {
+        this.stepInstance.saveData();
+      }
+
+      this.stepInstance.formsValidationInstance.currentStep++;
+      this.stepInstance.formsValidationInstance.init();
+    } else if (isPrevButton) {
+      this.stepInstance.formsValidationInstance.currentStep--;
+      this.stepInstance.formsValidationInstance.init();
+    }
+  };
+}
+
 class Step_0_Validation {
   selectors = {
     root: "[data-js-form]",
@@ -244,7 +295,9 @@ class Step_1_Validation {
     this.formsValidationInstance = formsValidationInstance;
     this.rootElement = document.querySelector(root);
 
-    this.switcherElement = this.rootElement.querySelector(this.selectors.switcher);
+    this.switcherElement = this.rootElement.querySelector(
+      this.selectors.switcher
+    );
     this.switcherCheckboxElement = this.switcherElement.querySelector(
       this.selectors.switcherCheckbox
     );
@@ -283,7 +336,9 @@ class Step_1_Validation {
 
   changeTextPriceCard = (isChecked) => {
     [...this.plansCardElements].forEach((plansCardElement) => {
-      const priceElement = plansCardElement.querySelector("[data-js-plan-price]");
+      const priceElement = plansCardElement.querySelector(
+        "[data-js-plan-price]"
+      );
       if (isChecked) {
         priceElement.textContent = `$${
           priceElement.textContent.slice(1, 3) * 10
@@ -340,7 +395,9 @@ class Step_1_Validation {
         );
         this.data["plan-price"] = price;
 
-        this.data["plan-tarif"] = planCard.querySelector(this.selectors.plansExtra)
+        this.data["plan-tarif"] = planCard.querySelector(
+          this.selectors.plansExtra
+        )
           ? "yearly"
           : "monthly";
 
@@ -363,7 +420,8 @@ class Step_1_Validation {
 
     this.switcherToggleElement.addEventListener("keydown", (event) => {
       if (this.isPressedEnter(event)) {
-        this.switcherCheckboxElement.checked = !this.switcherCheckboxElement.checked;
+        this.switcherCheckboxElement.checked =
+          !this.switcherCheckboxElement.checked;
         this.onSwitcherCheckboxChange();
       }
     });
@@ -379,6 +437,246 @@ class Step_1_Validation {
   };
 }
 
-class Step_2_Validation {}
-class Step_3_Validation {}
-class LastStep {}
+class Step_2_Validation {
+  selectors = {
+    addonsCard: "[data-js-addons-card]",
+    addonsPrice: "[data-js-addons-price]",
+    addonsTitle: "[data-js-addons-title]",
+  };
+
+  addonsPrices = {
+    onlineService: {
+      mo: "+1$/mo",
+      yr: "+10$/yr",
+    },
+    largerStorage: {
+      mo: "+2$/mo",
+      yr: "+20$/yr",
+    },
+    customizableProfile: {
+      mo: "+3$/mo",
+      yr: "+30$/yr",
+    },
+  };
+
+  stateClasses = {
+    isSelected: "is-selected",
+  };
+
+  constructor(formsValidationInstance) {
+    this.formsValidationInstance = formsValidationInstance;
+    this.rootElement = document.querySelector(root);
+    this.data = {};
+    this.data.addons = [];
+    this.addonsCardElements = this.rootElement.querySelectorAll(
+      this.selectors.addonsCard
+    );
+
+    this.bindEvents();
+    this.renderAddonsPrice();
+  }
+
+  renderAddonsPrice = () => {
+    const isMonthlyTarif =
+      this.formsValidationInstance.data["plan-tarif"] === "monthly";
+
+    const getPriceByTarif = (addonsCardElement) => {
+      const currentTarif = isMonthlyTarif ? "mo" : "yr";
+      const addonsCardName = addonsCardElement
+        .querySelector(this.selectors.addonsTitle)
+        .dataset.jsAddonsTitle.trim();
+      const priceTemplate = `${this.addonsPrices[addonsCardName][currentTarif]}`;
+      const tarifPriceElement = addonsCardElement.querySelector(
+        this.selectors.addonsPrice
+      );
+
+      tarifPriceElement.textContent = priceTemplate;
+    };
+
+    this.addonsCardElements.forEach((addonsCardElement) => {
+      getPriceByTarif(addonsCardElement);
+    });
+  };
+
+  onAddonsCardClick = (event) => {
+    const addonsCardElement = event.target.closest(this.selectors.addonsCard);
+    const isCheckbox = event.target.tagName === "INPUT";
+
+    if (!addonsCardElement || isCheckbox) {
+      addonsCardElement.classList.toggle(this.stateClasses.isSelected);
+    }
+  };
+
+  saveData = () => {
+    [...this.addonsCardElements]
+      .filter((element) => {
+        const isSelected = element.classList.contains(
+          this.stateClasses.isSelected
+        );
+        return isSelected;
+      })
+      .forEach((element) => {
+        const elementTextContent = element.querySelector(
+          this.selectors.addonsTitle
+        ).textContent;
+        const elementPrice = element.querySelector(
+          this.selectors.addonsPrice
+        ).textContent;
+        const obj = { name: elementTextContent, price: elementPrice };
+        this.data.addons.push(obj);
+      });
+    this.formsValidationInstance.saveData(this.data);
+  };
+
+  bindEvents = () => {
+    new FormActionsButtons(this);
+    this.addonsCardElements.forEach((addonsCardElement) => {
+      addonsCardElement.addEventListener("click", this.onAddonsCardClick);
+    });
+  };
+}
+
+class Step_3_Validation {
+  selectors = {
+    summaryTotal: "[data-js-summary-total]",
+    summaryTotalTitle: "[data-js-summary-total-title]",
+    summaryTotalPrice: "[data-js-summary-total-price]",
+    changePlanButton: "[data-js-plan-change-button]",
+  };
+
+  constructor(formsValidationInstance) {
+    this.formsValidationInstance = formsValidationInstance;
+    this.rootElement = document.querySelector(root);
+    this.data = {};
+
+    this.init();
+    this.bindEvents();
+  }
+
+  init = () => {
+    this.renderSummaryDetails();
+    this.renderTotalPrice();
+    this.changePlanButtonElement = document.querySelector(
+      this.selectors.changePlanButton
+    );
+  };
+
+  renderSummaryDetails = () => {
+    this.summaryTotalElement = this.rootElement.querySelector(
+      this.selectors.summaryTotal
+    );
+    const planName = this.formsValidationInstance.data["plan-name"];
+    const planPrice = this.formsValidationInstance.data["plan-price"];
+    const planTarif = this.formsValidationInstance.data["plan-tarif"];
+
+    const planNameEdited = `${planName?.toCapitalize()} (${planTarif?.toCapitalize()})`;
+    const planPriceEdited = `${planPrice}/${
+      planTarif === "monthly" ? "mo" : "yr"
+    }`;
+
+    this.summaryTotalElement.insertAdjacentHTML(
+      "beforebegin",
+      this.getSummaryInnerHTML(planNameEdited, planPriceEdited)
+    );
+  };
+
+  renderTotalPrice = () => {
+    const summaryTitleElement = this.summaryTotalElement.querySelector(
+      this.selectors.summaryTotalTitle
+    );
+    const summaryPriceElement = this.summaryTotalElement.querySelector(
+      this.selectors.summaryTotalPrice
+    );
+
+    const planTarif = this.formsValidationInstance.data["plan-tarif"];
+    const planPrice = parseInt(
+      this.formsValidationInstance.data["plan-price"].slice(1)
+    );
+    const addonsTotalPrice = this.formsValidationInstance.data.addons.reduce(
+      (sum, addon) => sum + parseInt(addon.price.slice(1)),
+      0
+    );
+
+    const planTarifText = planTarif === "monthly" ? "mo" : "yr";
+    summaryPriceElement.textContent = `$+${
+      planPrice + addonsTotalPrice
+    }/${planTarifText}`;
+    summaryTitleElement.textContent = `Total (per ${
+      planTarif === "monthly" ? "month" : "year"
+    })`;
+  };
+
+  onChangePlanButtonClick = () => {
+    this.formsValidationInstance.currentStep = 1;
+    this.formsValidationInstance.init();
+  };
+
+  bindEvents = () => {
+    new FormActionsButtons(this);
+    this.changePlanButtonElement.addEventListener(
+      "click",
+      this.onChangePlanButtonClick
+    );
+  };
+
+  getSummaryInnerHTML = (plan = "Arcade (Monthly)", planPrice = "$0/mo") => {
+    return `
+      <div class="summary__inner">
+        <div class="summary__header">
+          <div class="summary__plan">
+            <span class="summary__plan-title">${plan}</span>
+            <button type="button" class="summary__plan-button" data-js-plan-change-button>
+              Change
+            </button>
+          </div>
+          <span class="summary__header-price">${planPrice}</span>
+        </div>
+        ${this.renderSummaryAddons() ? this.renderSummaryAddons() : ""}
+      </div>
+    `;
+  };
+
+  renderSummaryAddons = () => {
+    const addons = this.formsValidationInstance.data.addons;
+    if (!addons || addons.length === 0) {
+      return;
+    }
+
+    const addonsHTML = addons
+      .map((item) => {
+        const { name, price } = item;
+        return getAddonHTML(name, price);
+      })
+      .join("");
+
+    return `
+    <ul class="summary__list">
+      ${addonsHTML}
+    </ul>
+  `;
+
+    function getAddonHTML(name, price) {
+      return `
+        <li class="summary__item">
+          <span class="summary__item-title">${name}</span>
+          <span class="summary__item-price">${price}</span>
+        </li>
+      `;
+    }
+  };
+}
+
+class LastStep {
+  constructor(formsValidationInstance) {
+    this.formsValidationInstance = formsValidationInstance;
+    this.rootElement = document.querySelector(root);
+
+    this.init();
+  }
+
+  init = () => {
+    console.log("Last Step");
+  };
+}
+
+export default FormsValidation;
