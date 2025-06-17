@@ -1,0 +1,16 @@
+@use "../helpers" as *;
+
+.section {
+  @include mobile-above {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100dvh;
+    margin-block: auto;
+    width: 70%;
+  }
+
+  @include desktop {
+    width: 100%;
+  }
+}
