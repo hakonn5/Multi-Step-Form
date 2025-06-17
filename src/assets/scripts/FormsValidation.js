@@ -15,6 +15,10 @@ export default class FormsValidation {
 
   stepValidationClasses = {
     0: Step_0_Validation,
+    1: Step_1_Validation,
+    2: Step_2_Validation,
+    3: Step_3_Validation,
+    4: LastStep,
   };
 
   constructor(formStepsControllerInstance) {
@@ -215,3 +219,166 @@ class Step_0_Validation {
     return `<span class="field__errors" data-js-field-errors>${errorMessage}</span>`;
   };
 }
+
+class Step_1_Validation {
+  selectors = {
+    switcher: "[data-js-switcher]",
+    switcherCheckbox: "[data-js-switcher-checkbox]",
+    switcherToggle: "[data-js-switcher-toggle]",
+    switcherVariants: {
+      switcherVariant_1: "[data-js-switcher-variant-1]",
+      switcherVariant_2: "[data-js-switcher-variant-2]",
+    },
+    plansCard: "[data-js-form-plans-card]",
+    plansCardInfo: "[data-js-plans-card-info]",
+    plansPrice: "[data-js-plan-price]",
+    plansExtra: "[data-plan-extra]",
+  };
+
+  stateClasses = {
+    switcherVarianActive: "switcher__variant--active",
+    plansCardIsSelected: "is-selected",
+  };
+
+  constructor(formsValidationInstance) {
+    this.formsValidationInstance = formsValidationInstance;
+    this.rootElement = document.querySelector(root);
+
+    this.switcherElement = this.rootElement.querySelector(this.selectors.switcher);
+    this.switcherCheckboxElement = this.switcherElement.querySelector(
+      this.selectors.switcherCheckbox
+    );
+    this.switcherToggleElement = this.switcherElement.querySelector(
+      this.selectors.switcherToggle
+    );
+    this.switcherVariantElement_1 = this.switcherElement.querySelector(
+      this.selectors.switcherVariants.switcherVariant_1
+    );
+    this.switcherVariantElement_2 = this.switcherElement.querySelector(
+      this.selectors.switcherVariants.switcherVariant_2
+    );
+    this.plansCardElements = this.rootElement.querySelectorAll(
+      this.selectors.plansCard
+    );
+
+    this.data = {};
+
+    this.bindEvents();
+  }
+
+  addExtraTextSwitcherCard = (isChecked) => {
+    const templateHTML = `<span class="plans__card-info-extra" data-plan-extra>2 months free</span>`;
+
+    [...this.plansCardElements].forEach((plansCardElement) => {
+      const cardBodyElement = plansCardElement.querySelector(
+        this.selectors.plansCardInfo
+      );
+      if (isChecked) {
+        cardBodyElement.insertAdjacentHTML("beforeend", templateHTML);
+      } else {
+        plansCardElement.querySelector("[data-plan-extra]").remove();
+      }
+    });
+  };
+
+  changeTextPriceCard = (isChecked) => {
+    [...this.plansCardElements].forEach((plansCardElement) => {
+      const priceElement = plansCardElement.querySelector("[data-js-plan-price]");
+      if (isChecked) {
+        priceElement.textContent = `$${
+          priceElement.textContent.slice(1, 3) * 10
+        }/yr`;
+      } else {
+        priceElement.textContent = `$${
+          priceElement.textContent.slice(1, 4) / 10
+        }/mo`;
+      }
+    });
+  };
+
+  onSwitcherCheckboxChange = () => {
+    const isChecked = this.switcherCheckboxElement.checked;
+
+    this.switcherVariantElement_2.classList.toggle(
+      this.stateClasses.switcherVarianActive,
+      isChecked
+    );
+    this.switcherVariantElement_1.classList.toggle(
+      this.stateClasses.switcherVarianActive,
+      !isChecked
+    );
+
+    this.addExtraTextSwitcherCard(isChecked);
+    this.changeTextPriceCard(isChecked);
+  };
+
+  onPlansCardClick = (event) => {
+    const plansCardElement = event.target;
+
+    [...this.plansCardElements].forEach((plansCardElement) => {
+      plansCardElement.classList.remove(this.stateClasses.plansCardIsSelected);
+    });
+
+    plansCardElement.classList.toggle(this.stateClasses.plansCardIsSelected);
+  };
+
+  saveData() {
+    const planCards = document.querySelectorAll(this.selectors.plansCard);
+
+    planCards.forEach((planCard) => {
+      const isSelected = planCard.classList.contains(
+        this.stateClasses.plansCardIsSelected
+      );
+      if (isSelected) {
+        this.data["plan-name"] = planCard.dataset.planName;
+
+        const priceElement = planCard.querySelector(this.selectors.plansPrice);
+        const rawPriceText = priceElement?.textContent.trim() || "";
+        const price = rawPriceText.slice(
+          0,
+          rawPriceText.indexOf("/") || rawPriceText.length
+        );
+        this.data["plan-price"] = price;
+
+        this.data["plan-tarif"] = planCard.querySelector(this.selectors.plansExtra)
+          ? "yearly"
+          : "monthly";
+
+        this.formsValidationInstance.saveData(this.data);
+      }
+    });
+  }
+
+  isPressedEnter = (event) => {
+    return event.key === "Enter" || event.code === "Enter";
+  };
+
+  bindEvents = () => {
+    new FormActionsButtons(this);
+
+    this.switcherCheckboxElement.addEventListener(
+      "change",
+      this.onSwitcherCheckboxChange
+    );
+
+    this.switcherToggleElement.addEventListener("keydown", (event) => {
+      if (this.isPressedEnter(event)) {
+        this.switcherCheckboxElement.checked = !this.switcherCheckboxElement.checked;
+        this.onSwitcherCheckboxChange();
+      }
+    });
+
+    this.plansCardElements.forEach((plansCardElement) => {
+      plansCardElement.addEventListener("click", this.onPlansCardClick);
+      plansCardElement.addEventListener("keydown", (event) => {
+        if (this.isPressedEnter(event)) {
+          this.onPlansCardClick(event);
+        }
+      });
+    });
+  };
+}
+
+class Step_2_Validation {}
+class Step_3_Validation {}
+class LastStep {}
